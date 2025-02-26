@@ -11,7 +11,12 @@ public class Program {
 
 	public static void main(String[] args) {
 		SearchEngine se = new FullTextSearchEngine(PREDICTED_XML_SIZE, PREDICTED_INDEX_SIZE, PREDICTED_SYNONYM_SIZE, PATH);
-		se.create();
+		try {
+			se.load();
+		}
+		catch (Exception e) {
+			System.out.println("an error occured");
+		}
 		se.getQueries();
 	}
 
