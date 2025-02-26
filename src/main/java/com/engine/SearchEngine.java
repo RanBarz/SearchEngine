@@ -1,9 +1,9 @@
 package com.engine;
 
 public interface SearchEngine {
-	public void create();
+	void create() throws Exception;
 	
-	public void load();
+	void load() throws Exception;
 	
-	public void getQueries();
+	void getQueries();
 }

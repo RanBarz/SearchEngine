@@ -6,8 +6,8 @@ import java.util.ArrayList;
 
 public class TextPreparer implements Serializable{
 	private static final long serialVersionUID = 1L;
-	private String[] stopWords;
-	private Stemmer stemmer;
+	private final String[] stopWords;
+	private final Stemmer stemmer;
 	
 	public TextPreparer(String[] stopWords) {
 		this.stopWords = stopWords;
@@ -19,9 +19,10 @@ public class TextPreparer implements Serializable{
 		List<String> filteredTokens = new ArrayList<>();
         for (String token : tokens) {
             token = token.toLowerCase();
-            if (!isStopWord(token))
-            	token = stemmer.stem(token);
-            	filteredTokens.add(token);
+            if (!isStopWord(token)) {
+				token = stemmer.stem(token);
+				filteredTokens.add(token);
+			}
         }
         return filteredTokens;
 	}

@@ -9,9 +9,9 @@ import com.file_handling.*;
 
 public class InvertedIndex implements Serializable{
 	private static final long serialVersionUID = 1L;
-	private Map<String, List<Integer>> index;
-	private Map<String, String> synonymMap;
-	private TextPreparer tp;
+	private final Map<String, List<Integer>> index;
+	private final Map<String, String> synonymMap;
+	private final TextPreparer tp;
 
 	public InvertedIndex(String[] stopWords, int predictedIndexSize, int predictedSynonymSize) {
 		index = new HashMap<>(predictedIndexSize);
@@ -25,57 +25,56 @@ public class InvertedIndex implements Serializable{
 	}
 	
 	public void create(List<Document> documents){
-		try {
-			SynonymChecker.setDictionary();
-		}
-		catch (JWNLException e) {
-			System.out.println("createInvertedIndex couldn't load up the dictionary");
-		}
         List<String> tokens;
 		HashSet<String> handledTokens= new HashSet<>();
 		
 		for (Document doc: documents) {
 	        tokens = tp.tokenize(doc.getText());
-	        
-	        for (String token : tokens) {
-	        	if (!handledTokens.contains(token)) {
-	        		addToSynonymMap(token);
-	        		handledTokens.add(token);
-	        	}
-	        }
-	        
-	        addTokens(doc, tokens);
+
+			addToHandled(tokens, handledTokens);
+			addTokens(doc, tokens);
 	        
 	        if (doc.getId() % 1000 == 0)
-	            System.out.println(String.format("%.2f%% done", (float) doc.getId() / documents.size() * 100));
-			if (doc.getId() / 34500 == 1)
-				break;
+	            System.out.printf("%.2f%% done\n", (float) doc.getId() / documents.size() * 100);
 	    }
 	}
-	
+
+	private void addToHandled(List<String> tokens, HashSet<String> handledTokens) {
+		for (String token : tokens) {
+			if (!handledTokens.contains(token)) {
+				addToSynonymMap(token);
+				handledTokens.add(token);
+			}
+		}
+	}
+
 	public void addTokens(Document doc, List<String> tokens) {
-		String synonym;
-		List<Integer> ids;
 		Set<String> processedTokens = new HashSet<>();
 	
 		for (String token : tokens) {
-	        synonym = findSynonymInMap(token);
-	        
-	        if (processedTokens.contains(token)) 
-	            continue;
-	        
-	        processedTokens.add(token);
-	        index.computeIfAbsent(synonym, k -> new ArrayList<>());
-	        ids = index.get(synonym);
-	        
-	        if (!ids.isEmpty() && ids.get(ids.size() - 1).equals(doc.getId())) {
-	            continue;
-	        }
-	        
-	        ids.add(doc.getId());
-	    }
+			addToken(doc, token, processedTokens);
+		}
 	}
-	
+
+	private void addToken(Document doc, String token, Set<String> processedTokens) {
+		if (processedTokens.contains(token))
+			return;
+
+		String synonym;
+		List<Integer> idList;
+
+		synonym = findSynonymInMap(token);
+		index.computeIfAbsent(synonym, k -> new ArrayList<>());
+		idList = index.get(synonym);
+
+		if (!idList.isEmpty() && idList.get(idList.size() - 1).equals(doc.getId())) {
+			return;
+		}
+
+		idList.add(doc.getId());
+		processedTokens.add(token);
+	}
+
 	public void addToSynonymMap(String token) {	
 	    for (Map.Entry<String, String> entry : synonymMap.entrySet()) {
 	    	try {
@@ -98,30 +97,20 @@ public class InvertedIndex implements Serializable{
 	}
 	
 	
-	public void save() {
-		try {
-			FileOutputStream fileOut = new FileOutputStream("src/main/resources/FullInvertedIndex.ser.gz");
-    		GZIPOutputStream gzipOut = new GZIPOutputStream(fileOut);
-    		ObjectOutputStream out = new ObjectOutputStream(gzipOut); 
-	        out.writeObject(this);
-			out.close();
-
-	    } catch (IOException e) {
-	        System.out.println(e);
-	    }
+	public void save() throws Exception {
+		FileOutputStream fileOut = new FileOutputStream("src/main/resources/FullInvertedIndex.ser.gz");
+		GZIPOutputStream gzipOut = new GZIPOutputStream(fileOut);
+		ObjectOutputStream out = new ObjectOutputStream(gzipOut);
+		out.writeObject(this);
+		out.close();
 	}
 	
-	public static InvertedIndex load() {
-		try { 
-			FileInputStream fileIn = new FileInputStream("FullInvertedIndex.ser.gz");
-    		GZIPInputStream gzipIn = new GZIPInputStream(fileIn);
-    		ObjectInputStream in = new ObjectInputStream(gzipIn); 
-	        InvertedIndex loadedObject = (InvertedIndex) in.readObject();
-	        in.close();
-	        return loadedObject;
-		} catch (IOException | ClassNotFoundException e) {
-	         System.out.println(e);
-	    }
-		return null;
+	public static InvertedIndex load() throws Exception{
+		FileInputStream fileIn = new FileInputStream("src/main/resources/FullInvertedIndex.ser.gz");
+		GZIPInputStream gzipIn = new GZIPInputStream(fileIn);
+		ObjectInputStream in = new ObjectInputStream(gzipIn);
+		InvertedIndex loadedObject = (InvertedIndex) in.readObject();
+		in.close();
+		return loadedObject;
 	}
 }

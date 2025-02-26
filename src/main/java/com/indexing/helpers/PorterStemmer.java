@@ -9,7 +9,7 @@ import java.util.Set;
 
 public class PorterStemmer implements Stemmer, Serializable{
    private static final long serialVersionUID = 1L;
-   private Map<String, String> dictionary = new HashMap<>();
+   private final Map<String, String> dictionary = new HashMap<>();
    private static final Character[] vowelArr = new Character[] {'a', 'e', 'o', 'u', 'i'};
    private static final Set<Character> vowelSet = new HashSet<>(Arrays.asList(vowelArr));
    private static PorterStemmer singleton;
@@ -49,9 +49,8 @@ public class PorterStemmer implements Stemmer, Serializable{
 		   stem = stem.substring(0, stem.length() - 2);
        } else if (stem.endsWith("ies")) {
     	   stem = stem.substring(0, stem.length() - 2);
-       } else if (stem.endsWith("ss")) {
-           return;
-       } else if (stem.endsWith("s")) {
+       }
+		else if (!stem.endsWith("ss") && stem.endsWith("s")) {
            if (containsVowel(stem.substring(0, stem.length() - 1))) {
         	   stem = stem.substring(0, stem.length() - 1);
            }
@@ -71,14 +70,19 @@ public class PorterStemmer implements Stemmer, Serializable{
 		   flag = true;
 	   }
 	   if (flag) {
-		   if (stem.endsWith("at") || stem.endsWith("bl") ||stem.endsWith("iz") || (getMeasure(stem) == 1 && endsWithCvc(stem)))
+		   if (shouldAddE())
 			   stem += "e";
 		   else if (endsWithDoubleConsonant(stem) && !stem.endsWith("l") && !stem.endsWith("z") && !stem.endsWith("s"))
 			   stem = stem.substring(0, stem.length() - 1);
 	   }
    }
-   
-   private void step1c() {
+
+	private boolean shouldAddE() {
+		return stem.endsWith("at") || stem.endsWith("bl") ||
+				stem.endsWith("iz") || (getMeasure(stem) == 1 && endsWithCvc(stem));
+	}
+
+	private void step1c() {
 	   if (stem.endsWith("y") && containsVowel(stem.substring(0, stem.length() - 1)))
 		   stem = replaceEnding(stem, "y", "i");
    }
@@ -124,7 +128,7 @@ public class PorterStemmer implements Stemmer, Serializable{
 		    		if (stem.substring(0, stem.length() - 3).equals("s") || stem.substring(0, stem.length() - 3).equals("t"))
 		    			 stem = replaceEnding(stem, suffix, "");
 		    	else
-		    		stem = replaceEnding(stem, suffix, "");	
+					 stem = replaceEnding(stem, suffix, "");
 		    }
 		}
    }
@@ -158,9 +162,7 @@ public class PorterStemmer implements Stemmer, Serializable{
 	   letterTypes(str);
 	   if (str.length < 2)
 		   return false;
-	   if (str[str.length - 1] == 'c' && str[str.length - 2] == 'c')
-		   return true;
-	   return false;
+       return str[str.length - 1] == 'c' && str[str.length - 2] == 'c';
    }
    
    private static boolean endsWithCvc(String word) {
@@ -168,13 +170,15 @@ public class PorterStemmer implements Stemmer, Serializable{
 	   letterTypes(str);
 	   if (str.length < 3)
 		   return false;
-	   if (str[str.length - 1] == 'c' && str[str.length - 2] == 'v' && str[str.length - 3] == 'c' 
-			   && str[str.length - 1] != 'x' && str[str.length - 1] != 'y' && str[str.length - 1] != 'w')
-		   return true;
-	   return false;   		   
+	   return followsCvcRules(str);
    }
-   
-   private static int getMeasure(String word) {
+
+	private static boolean followsCvcRules(char[] str) {
+		return str[str.length - 1] == 'c' && str[str.length - 2] == 'v' && str[str.length - 3] == 'c'
+				&& str[str.length - 1] != 'x' && str[str.length - 1] != 'y' && str[str.length - 1] != 'w';
+	}
+
+	private static int getMeasure(String word) {
 	   int measure = 0;
 	   char[] str = word.toCharArray();
 	   letterTypes(str);
@@ -200,9 +204,7 @@ public class PorterStemmer implements Stemmer, Serializable{
    private static boolean isVowel(char c, char previousChar) {
 	   if (vowelSet.contains(c))
 		   return true;
-	   if (!vowelSet.contains(previousChar) && c == 'y')
-		   return true;
-	   return false;
+       return !vowelSet.contains(previousChar) && c == 'y';
    }
    
    private static String replaceEnding(String word, String oldEnding, String newEnding) {
