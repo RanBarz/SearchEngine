@@ -1,28 +1,17 @@
 package com.indexing.helpers;
 
-import java.io.Serializable;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import org.springframework.stereotype.Component;
 
+import java.io.Serializable;
+import java.util.*;
+
+@Component
 public class PorterStemmer implements Stemmer, Serializable{
    private static final long serialVersionUID = 1L;
    private final Map<String, String> dictionary = new HashMap<>();
-   private static final Character[] vowelArr = new Character[] {'a', 'e', 'o', 'u', 'i'};
-   private static final Set<Character> vowelSet = new HashSet<>(Arrays.asList(vowelArr));
-   private static PorterStemmer singleton;
+   private static final Set VOWEL_SET = new HashSet<>(Collections.singleton(new char[]{'a', 'e', 'o', 'u', 'i'}));
    private String stem;
    private int measure;
-   
-   private PorterStemmer() {}
-   
-   public static PorterStemmer getInstance() {
-	   if (singleton == null) 
-		   singleton = new PorterStemmer();
-	   return singleton;
-   }
    
    public String stem(String word) {
 	   if (dictionary.containsKey(word))
@@ -202,9 +191,9 @@ public class PorterStemmer implements Stemmer, Serializable{
    }      
    
    private static boolean isVowel(char c, char previousChar) {
-	   if (vowelSet.contains(c))
+	   if (VOWEL_SET.contains(c))
 		   return true;
-       return !vowelSet.contains(previousChar) && c == 'y';
+       return !VOWEL_SET.contains(previousChar) && c == 'y';
    }
    
    private static String replaceEnding(String word, String oldEnding, String newEnding) {

@@ -6,25 +6,28 @@ import java.util.zip.*;
 import net.sf.extjwnl.JWNLException;
 import com.indexing.helpers.*;
 import com.file_handling.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+@Component
 public class InvertedIndex implements Serializable{
 	private static final long serialVersionUID = 1L;
-	private final Map<String, List<Integer>> index;
-	private final Map<String, String> synonymMap;
-	private final TextPreparer tp;
+	private static final int PREDICTED_INDEX_SIZE = 525000;
+	private static final int PREDICTED_SYNONYM_SIZE = 316000;
+	private Map<String, List<Integer>> index;
+	private Map<String, String> synonymMap;
 
-	public InvertedIndex(String[] stopWords, int predictedIndexSize, int predictedSynonymSize) {
-		index = new HashMap<>(predictedIndexSize);
-		synonymMap = new HashMap<>(predictedSynonymSize);
-	    tp = new TextPreparer(stopWords);
-	}
-	
-	
+	@Autowired
+	private TextPreparer tp;
+
 	public List<Integer> lookUp(String token) {
 		return index.getOrDefault(this.findSynonymInMap(token), null);
 	}
 	
 	public void create(List<Document> documents){
+		index = new HashMap<>(PREDICTED_INDEX_SIZE);
+		synonymMap = new HashMap<>(PREDICTED_SYNONYM_SIZE);
+
         List<String> tokens;
 		HashSet<String> handledTokens= new HashSet<>();
 		
@@ -98,19 +101,24 @@ public class InvertedIndex implements Serializable{
 	
 	
 	public void save() throws Exception {
-		FileOutputStream fileOut = new FileOutputStream("src/main/resources/FullInvertedIndex.ser.gz");
+		FileOutputStream fileOut = new FileOutputStream("C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\FullInvertedIndex.ser.gz");
 		GZIPOutputStream gzipOut = new GZIPOutputStream(fileOut);
 		ObjectOutputStream out = new ObjectOutputStream(gzipOut);
 		out.writeObject(this);
 		out.close();
 	}
 	
-	public static InvertedIndex load() throws Exception{
-		FileInputStream fileIn = new FileInputStream("src/main/resources/FullInvertedIndex.ser.gz");
+	public void load() throws Exception{
+		FileInputStream fileIn = new FileInputStream("C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\FullInvertedIndex.ser.gz");
 		GZIPInputStream gzipIn = new GZIPInputStream(fileIn);
 		ObjectInputStream in = new ObjectInputStream(gzipIn);
 		InvertedIndex loadedObject = (InvertedIndex) in.readObject();
 		in.close();
-		return loadedObject;
+		index = loadedObject.index;
+		synonymMap = loadedObject.synonymMap;
+	}
+
+	public boolean isEmpty() {
+		return index == null;
 	}
 }

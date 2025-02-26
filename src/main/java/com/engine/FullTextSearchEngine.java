@@ -4,54 +4,60 @@ import java.util.*;
 import com.file_handling.*;
 import com.indexing.*;
 import com.indexing.helpers.TextPreparer;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-
+@Component
 public class FullTextSearchEngine implements SearchEngine {
-	private final String path;
-	private static final String[] STOP_WORDS = {"a", "and", "be", "have", "i", "in", "of", "that", "the", "to"};
-	private final XmlLoader<Document> xlObject;
+	private final String PATH = "C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\Database.xml.gz";
+
+	@Autowired
+	private  XmlLoader<Document> xlObject;
+
+	@Autowired
 	private InvertedIndex iiObject;
+
+	@Autowired
+	private TextPreparer tp;
+
 	private List<Document> documents;
-	
-	public FullTextSearchEngine(int predictedSize, int predictedIndexSize, int predictedSynonymSize, String path) {
-		xlObject = new DocumentXmlLoader(predictedSize);
-		iiObject = new InvertedIndex(STOP_WORDS, predictedIndexSize, predictedSynonymSize);
-		this.path = path;
-	}
-	
+
 	public void create() throws Exception{
-		documents = xlObject.load(path);
+		documents = xlObject.load(PATH);
 		iiObject.create(documents);
 		iiObject.save();
 	}
 	
 	public void load() throws Exception{
-		documents = xlObject.load(path);
-        iiObject = InvertedIndex.load();
+		documents = xlObject.load(PATH);
+        iiObject.load();
     }
-	
-	public void getQueries () {
-		Scanner scanner = new Scanner(System.in);
-        System.out.print("\nEnter you query: ");
-        String query = scanner.nextLine();
-        while (!query.equals("end")) {
-	        for (int result: search(query, iiObject)) 
-	        	System.out.printf("%s\n\n", documents.get(result).getText());
-	        System.out.print("\nEnter you query: ");
-	        query = scanner.nextLine();     
-        }   
-        scanner.close();
+
+	public void getInvertedIndex() throws Exception {
+		try {
+			load();
+		}
+		catch(Exception e) {
+			create();
+		}
 	}
 
-	public Set<Integer> search(String query, InvertedIndex iiObject) {
-		TextPreparer tp = new TextPreparer(STOP_WORDS);
+	public List<Document> search(String query) throws Exception {
+		if (iiObject.isEmpty())
+			getInvertedIndex();
+
+		List<Document> documentResults = new ArrayList<>();
 		Set<Integer> idSet= new HashSet<>();
 		List<Integer> result;
+
 		for (String token: tp.tokenize(query)) {
 			result = iiObject.lookUp(token);
 			if (result != null)
                 idSet.addAll(result);
 		}
-		return idSet;
+		for (int id: idSet) {
+			documentResults.add(documents.get(id));
+		}
+		return documentResults;
 	}	
 }

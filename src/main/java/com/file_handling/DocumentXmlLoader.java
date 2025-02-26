@@ -1,5 +1,6 @@
 package com.file_handling;
 
+import org.springframework.stereotype.Component;
 import org.xml.sax.*;
 import org.xml.sax.helpers.DefaultHandler;
 import javax.xml.parsers.*;
@@ -8,15 +9,12 @@ import java.nio.file.Files;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 
+@Component
 public final class DocumentXmlLoader implements XmlLoader<Document>{
-	private final int predictedSize;
-	
-	public DocumentXmlLoader(int predictedSize) {
-		this.predictedSize = predictedSize;
-	}
+	private final int PREDICTED_SIZE = 690000;
 
     public List<Document> load(String path) throws Exception {
-        List<Document> documents = new ArrayList<>(predictedSize);
+        List<Document> documents = new ArrayList<>(PREDICTED_SIZE);
         InputStream fileStream = openGzipStream(path);
         parseXml(fileStream, documents);
         return documents;
