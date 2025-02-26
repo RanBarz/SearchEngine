@@ -7,9 +7,9 @@ import com.indexing.helpers.TextPreparer;
 
 
 public class FullTextSearchEngine implements SearchEngine {
-	private String path;
+	private final String path;
 	private static final String[] STOP_WORDS = {"a", "and", "be", "have", "i", "in", "of", "that", "the", "to"};
-	private XmlLoader<Document> xlObject;
+	private final XmlLoader<Document> xlObject;
 	private InvertedIndex iiObject;
 	private List<Document> documents;
 	
@@ -19,25 +19,25 @@ public class FullTextSearchEngine implements SearchEngine {
 		this.path = path;
 	}
 	
-	public void create() {
+	public void create() throws Exception{
 		documents = xlObject.load(path);
 		iiObject.create(documents);
 		iiObject.save();
 	}
 	
-	public void load() {
+	public void load() throws Exception{
 		documents = xlObject.load(path);
         iiObject = InvertedIndex.load();
     }
 	
 	public void getQueries () {
 		Scanner scanner = new Scanner(System.in);
-        System.out.printf("\nEnter you query: ");
+        System.out.print("\nEnter you query: ");
         String query = scanner.nextLine();
         while (!query.equals("end")) {
 	        for (int result: search(query, iiObject)) 
 	        	System.out.printf("%s\n\n", documents.get(result).getText());
-	        System.out.printf("\nEnter you query: ");
+	        System.out.print("\nEnter you query: ");
 	        query = scanner.nextLine();     
         }   
         scanner.close();
