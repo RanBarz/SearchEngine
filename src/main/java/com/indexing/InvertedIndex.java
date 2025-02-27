@@ -78,21 +78,25 @@ public class InvertedIndex implements Serializable{
 		processedTokens.add(token);
 	}
 
-	public void addToSynonymMap(String token) {	
-	    for (Map.Entry<String, String> entry : synonymMap.entrySet()) {
-	    	try {
-	            if (SynonymChecker.areSynonyms(token, entry.getKey())) {
-	                synonymMap.put(token, entry.getKey()); 
-	                return; 
-	            }
-	    	}
-	    	catch (JWNLException e){
-	    		System.out.println("addToSynonymMap had a problem with token: " + token);
-	    	}
-	    }
-	    synonymMap.put(token, token);
+	public void addToSynonymMap(String token) {
+		String existingSynonym = synonymMap.entrySet()
+				.parallelStream()
+				.filter(entry -> {
+					try {
+						return SynonymChecker.areSynonyms(token, entry.getKey());
+					} catch (JWNLException e) {
+						System.out.println("Error checking synonyms for: " + token);
+						return false;
+					}
+				})
+				.map(Map.Entry::getKey)
+				.findFirst()
+				.orElse(token);
+
+		synonymMap.put(token, existingSynonym);
 	}
-	
+
+
 	public String findSynonymInMap(String token) {
 		if (synonymMap.containsKey(token))
 			return token;
