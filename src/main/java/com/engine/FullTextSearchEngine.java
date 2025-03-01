@@ -3,7 +3,9 @@ import java.util.*;
 
 import com.file_handling.*;
 import com.indexing.*;
+import com.indexing.data_types.InvertedIndexRecord;
 import com.indexing.helpers.TextPreparer;
+import com.ranking.OkapiRanker;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -20,12 +22,14 @@ public class FullTextSearchEngine implements SearchEngine {
 	@Autowired
 	private TextPreparer tp;
 
+	@Autowired
+	private OkapiRanker ranker;
+
 	private List<Document> documents;
 
 	public void create() throws Exception{
 		documents = xlObject.load(PATH);
 		iiObject.create(documents);
-		iiObject.save();
 	}
 	
 	public void load() throws Exception{
@@ -47,17 +51,21 @@ public class FullTextSearchEngine implements SearchEngine {
 			getInvertedIndex();
 
 		List<Document> documentResults = new ArrayList<>();
-		Set<Integer> idSet= new HashSet<>();
-		List<Integer> result;
+		List<InvertedIndexRecord> allResults = new ArrayList<>();
+		List<InvertedIndexRecord> result;
 
 		for (String token: tp.tokenize(query)) {
 			result = iiObject.lookUp(token);
 			if (result != null)
-                idSet.addAll(result);
+                allResults.addAll(result);
 		}
-		for (int id: idSet) {
-			documentResults.add(documents.get(id));
+
+		ranker.sort(allResults, iiObject.getIdfMap(), documents);
+
+		for (InvertedIndexRecord record: allResults) {
+			documentResults.add(documents.get(record.getDocumentId()));
 		}
+
 		return documentResults;
 	}	
 }

@@ -1,9 +1,12 @@
 package com.file_handling;
 
+import java.util.StringTokenizer;
+
 public class Document {
     private String title;
     private String url;
     private String text;
+    private int wordCount;
     private int id;
 
     public String getTitle() { return title; }
@@ -17,4 +20,15 @@ public class Document {
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
+
+    public int getWordCount() { return wordCount; }
+
+    public void setWordCount() {
+        if (text == null || text.isEmpty()) {
+            this.wordCount = 0;
+            return;
+        }
+        StringTokenizer tokenizer = new StringTokenizer(text);
+        this.wordCount =  tokenizer.countTokens();
+    }
 }

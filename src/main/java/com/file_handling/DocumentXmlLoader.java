@@ -57,6 +57,7 @@ public final class DocumentXmlLoader implements XmlLoader<Document>{
                             break;
                         case "abstract":
                             currentDocument.setText(currentValue.toString());
+                            currentDocument.setWordCount();
                             break;
                         case "doc":
                             documents.add(currentDocument);

@@ -8,8 +8,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 
 @Component
-public class TextPreparer implements Serializable{
-	private static final long serialVersionUID = 1L;
+public class TextPreparer{
 	private static final String[] STOP_WORDS = {"a", "and", "be", "have", "i", "in", "of", "that", "the", "to"};
 
 	@Autowired

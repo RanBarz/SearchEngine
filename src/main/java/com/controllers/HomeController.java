@@ -1,5 +1,6 @@
 package com.controllers;
 
+import com.file_handling.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -30,7 +31,7 @@ public class HomeController {
     @PostMapping("/search")
     public String doSearch(@RequestParam("query") String query, Model model) {
         try {
-            List results = searchEngineService.search(query);
+            List<Document> results = searchEngineService.search(query);
             model.addAttribute("results", results);
             model.addAttribute("query", query);
             return "results";
