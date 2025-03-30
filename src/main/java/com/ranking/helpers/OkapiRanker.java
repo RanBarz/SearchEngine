@@ -3,38 +3,80 @@ package com.ranking.helpers;
 import com.file_handling.Document;
 import com.indexing.data_types.InvertedIndexRecord;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.*;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 @Component
 public class OkapiRanker {
+    private final String PATH =
+            "C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\idfMap.ser.gz";
+
     private final double k1 = 1.2;
     private final double b = 0.75;
+    private Map<String, Double> idfMap;
 
-    Map<String, Double> scores;
-
-
-    private static double getAvgLength(List<Document> documents) {
-        return documents.stream().mapToInt(Document::getWordCount).average().orElse(0);
+    @PreDestroy
+    public void save() {
+        try {
+            FileOutputStream fileOut = new FileOutputStream(PATH);
+            GZIPOutputStream gzipOut = new GZIPOutputStream(fileOut);
+            ObjectOutputStream out = new ObjectOutputStream(gzipOut);
+            out.writeObject(idfMap);
+            out.close();
+        }
+        catch (Exception e) {
+            System.out.println("Failed to save idf map...");
+        }
     }
 
-    public void
-    rank(List<String> queryTerms, List<InvertedIndexRecord> records, Map<String, Double> idfMap, List<Document> documents) {
-        double avgDL = getAvgLength(documents);
-        scores = new HashMap<>();
+    @PostConstruct
+    public void load() {
+        try {
+            FileInputStream fileIn = new FileInputStream(PATH);
+            GZIPInputStream gzipIn = new GZIPInputStream(fileIn);
+            ObjectInputStream in = new ObjectInputStream(gzipIn);
+            idfMap = (Map<String, Double>) in.readObject();
+            in.close();
+        } catch (Exception e) {
+            System.out.println("No idf map, one will be created.");
+        }
+    }
+
+    public void create(Map<String, Double> idfMap) {
+        this.idfMap = idfMap;
+        save();
+    }
+
+    public Map<String, Double>
+    rank(double avgDl, List<String> queryTerms, List<InvertedIndexRecord> records, List<Document> documents) {
+        Map<String, Double> scores = new HashMap<>();
 
         for (String term : queryTerms) {
             double idf = idfMap.getOrDefault(term, 1.0);
 
-            for (InvertedIndexRecord record : records) {
-                int docId = record.getDocumentId();
-                int termFrequency = record.getTokenPositions().size();
+            addToScores(scores, records, documents, idf, avgDl);
+        }
+        return scores;
+    }
 
-                Document doc = documents.get(docId);
-                if (doc == null) continue;
+    private void addToScores(Map<String, Double> scores, List<InvertedIndexRecord> records, List<Document> documents, double idf, double avgDl) {
+        for (InvertedIndexRecord record : records) {
+            int docId = record.getDocumentId();
+            int termFrequency = record.getTokenPositions().size();
 
-                double termScore = computeBM25(idf, termFrequency, doc.getWordCount(), avgDL);
-                scores.put(doc.getTitle(), scores.getOrDefault(doc.getTitle(), 0.0) + termScore);
-            }
+            Document doc = documents.get(docId);
+            if (doc == null) continue;
+
+            double termScore = computeBM25(idf, termFrequency, doc.getWordCount(), avgDl);
+            scores.put(doc.getTitle(), scores.getOrDefault(doc.getTitle(), 0.0) + termScore);
         }
     }
 
@@ -43,7 +85,7 @@ public class OkapiRanker {
         return idf * tfComponent;
     }
 
-    public double get(String title) {
-        return scores.get(title);
+    public boolean isEmpty() {
+        return idfMap == null;
     }
 }

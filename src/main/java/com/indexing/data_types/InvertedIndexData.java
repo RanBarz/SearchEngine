@@ -11,15 +11,9 @@ import java.util.List;
 import java.util.Map;
 
 public class InvertedIndexData implements Serializable {
-    private static final long serialVersionUID = -5347919533701690247L; // Match this value with the serialized object's value
+    private static final long serialVersionUID = -5347919533701690247L;
     private Map<String, List<InvertedIndexRecord>> index;
     private Map<String, String> synonymMap;
-
-    public Map<String, Double> getIdfMap() {
-        return idfMap;
-    }
-
-    private Map<String, Double> idfMap;
 
     public InvertedIndexData() {
         index = new HashMap<>();
@@ -53,8 +47,8 @@ public class InvertedIndexData implements Serializable {
             recordList.add(new InvertedIndexRecord(doc.getId(), position));
     }
 
-    public void createIdfMap(int totalSize) {
-        idfMap = new HashMap<>();
+    public Map<String, Double> getIdfMap(int totalSize) {
+        Map<String, Double> idfMap = new HashMap<>();
 
         for (Map.Entry<String, List<InvertedIndexRecord>> entry : index.entrySet()) {
             String term = entry.getKey();
@@ -62,5 +56,7 @@ public class InvertedIndexData implements Serializable {
             double idf = Math.log((totalSize - docCount + 0.5) / (docCount + 0.5) + 1);
             idfMap.put(term, idf);
         }
+
+        return idfMap;
     }
 }

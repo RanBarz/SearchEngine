@@ -41,7 +41,10 @@ public class FullTextSearchEngine implements SearchEngine {
 
 		allResults = new ArrayList<>(resultsSet);
 
-		ranker.sort(tp.tokenize(query), allResults, iiObject.getIdfMap(), documents);
+		if (ranker.isEmpty())
+			ranker.create(iiObject.getIdfMap(documents.size()));
+
+		ranker.sort(tp.tokenize(query), allResults, documents);
 
 		for (InvertedIndexRecord record: allResults) {
 			documentResults.add(documents.get(record.getDocumentId()));

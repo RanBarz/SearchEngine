@@ -26,8 +26,8 @@ public class InvertedIndex implements Index{
 		return data.get(token);
 	}
 
-	public Map<String, Double> getIdfMap() {
-		return data.getIdfMap();
+	public Map<String, Double> getIdfMap(int totalSize) {
+		return data.getIdfMap(totalSize);
 	}
 	
 	public void create(List<Document> documents) throws Exception {
@@ -47,8 +47,6 @@ public class InvertedIndex implements Index{
 
 			System.out.printf("%f done\n", percent);
 	    }
-
-		data.createIdfMap(documents.size());
 	}
 
 	private void addToHandled(List<String> tokens, HashSet<String> handledTokens) {
