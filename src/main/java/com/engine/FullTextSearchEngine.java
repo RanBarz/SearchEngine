@@ -5,7 +5,7 @@ import com.file_handling.*;
 import com.indexing.*;
 import com.indexing.data_types.InvertedIndexRecord;
 import com.indexing.helpers.TextPreparer;
-import com.ranking.OkapiRanker;
+import com.ranking.FullRanker;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -23,49 +23,41 @@ public class FullTextSearchEngine implements SearchEngine {
 	private TextPreparer tp;
 
 	@Autowired
-	private OkapiRanker ranker;
+	private FullRanker ranker;
 
 	private List<Document> documents;
 
-	public void create() throws Exception{
-		documents = xlObject.load(PATH);
-		iiObject.create(documents);
-	}
-	
-	public void load() throws Exception{
-		documents = xlObject.load(PATH);
-        iiObject.load();
-    }
-
-	public void getInvertedIndex() throws Exception {
-		try {
-			load();
-		}
-		catch(Exception e) {
-			create();
-		}
-	}
-
 	public List<Document> search(String query) throws Exception {
+		documents = xlObject.getDocuments();
+
 		if (iiObject.isEmpty())
-			getInvertedIndex();
+			iiObject.create(documents);
 
-		List<Document> documentResults = new ArrayList<>();
-		List<InvertedIndexRecord> allResults = new ArrayList<>();
-		List<InvertedIndexRecord> result;
+		Set<Document> documentResults = new HashSet<>();
+		Set<InvertedIndexRecord> resultsSet = new HashSet<>();
+		List<InvertedIndexRecord> allResults;
 
-		for (String token: tp.tokenize(query)) {
-			result = iiObject.lookUp(token);
-			if (result != null)
-                allResults.addAll(result);
-		}
+		getAllResults(query, resultsSet);
 
-		ranker.sort(allResults, iiObject.getIdfMap(), documents);
+		allResults = new ArrayList<>(resultsSet);
+
+		ranker.sort(tp.tokenize(query), allResults, iiObject.getIdfMap(), documents);
 
 		for (InvertedIndexRecord record: allResults) {
 			documentResults.add(documents.get(record.getDocumentId()));
 		}
 
-		return documentResults;
-	}	
+		return new ArrayList<>(documentResults);
+	}
+
+	private void getAllResults(String query, Set<InvertedIndexRecord> resultsSet) {
+		List<InvertedIndexRecord> result;
+
+		for (String token: tp.tokenize(query)) {
+			result = iiObject.lookUp(token);
+			if (result != null) {
+				resultsSet.addAll(result);
+			}
+		}
+	}
 }

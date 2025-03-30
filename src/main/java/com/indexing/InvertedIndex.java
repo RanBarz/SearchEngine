@@ -11,8 +11,12 @@ import com.file_handling.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
 @Component
 public class InvertedIndex implements Index{
+	private final String PATH = "C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\InvertedIndexData.ser.gz";
 	private InvertedIndexData data;
 
 	@Autowired
@@ -28,7 +32,7 @@ public class InvertedIndex implements Index{
 	
 	public void create(List<Document> documents) throws Exception {
 		data = new InvertedIndexData();
-        List<String> tokens;
+		List<String> tokens;
 		HashSet<String> handledTokens= new HashSet<>();
 		float percent;
 
@@ -41,15 +45,10 @@ public class InvertedIndex implements Index{
 
 			percent = (float) doc.getId() / documents.size() * 100;
 
-	        if (doc.getId() % 1000 == 0)
-	            System.out.printf("%f done\n", percent);
-			if (percent >= 5)
-				break;
+			System.out.printf("%f done\n", percent);
 	    }
 
 		data.createIdfMap(documents.size());
-
-		save();
 	}
 
 	private void addToHandled(List<String> tokens, HashSet<String> handledTokens) {
@@ -75,23 +74,34 @@ public class InvertedIndex implements Index{
 		data.add(doc, synonym, position);
 	}
 
+	@PreDestroy
 	public void save() throws Exception {
-		FileOutputStream fileOut = new FileOutputStream("C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\InvertedIndexData.ser.gz");
+		FileOutputStream fileOut = new FileOutputStream(PATH);
 		GZIPOutputStream gzipOut = new GZIPOutputStream(fileOut);
 		ObjectOutputStream out = new ObjectOutputStream(gzipOut);
 		out.writeObject(data);
 		out.close();
 	}
-	
+
+	@PostConstruct
 	public void load() throws Exception{
-		FileInputStream fileIn = new FileInputStream("C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\InvertedIndexData.ser.gz");
-		GZIPInputStream gzipIn = new GZIPInputStream(fileIn);
-		ObjectInputStream in = new ObjectInputStream(gzipIn);
-		data = (InvertedIndexData) in.readObject();
-		in.close();
+		try {
+			FileInputStream fileIn = new FileInputStream(PATH);
+			GZIPInputStream gzipIn = new GZIPInputStream(fileIn);
+			ObjectInputStream in = new ObjectInputStream(gzipIn);
+			data = (InvertedIndexData) in.readObject();
+			in.close();
+		}
+		catch (Exception e) {
+			System.out.println("No Inverted Index, one will be created.");
+		}
 	}
 
 	public boolean isEmpty() {
 		return data == null;
+	}
+
+	public InvertedIndexData getData() {
+		return data;
 	}
 }

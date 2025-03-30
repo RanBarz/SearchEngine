@@ -149,7 +149,7 @@
                             <strong>${result.title}</strong>
                             <br>
                             <a href="${result.url}" target="_blank">${result.url}</a>
-                            <p>${result.text}</p>
+                            <!-- Removed the text content -->
                         </li>
                     </c:forEach>
                 </ul>

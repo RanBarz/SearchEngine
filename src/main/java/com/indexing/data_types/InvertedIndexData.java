@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 public class InvertedIndexData implements Serializable {
+    private static final long serialVersionUID = -5347919533701690247L; // Match this value with the serialized object's value
     private Map<String, List<InvertedIndexRecord>> index;
     private Map<String, String> synonymMap;
 
@@ -36,21 +37,9 @@ public class InvertedIndexData implements Serializable {
     }
 
     public void addToSynonymMap(String token) {
-        String existingSynonym = synonymMap.entrySet()
-                .parallelStream()
-                .filter(entry -> {
-                    try {
-                        return SynonymChecker.areSynonyms(token, entry.getKey());
-                    } catch (JWNLException e) {
-                        System.out.println("Error checking synonyms for: " + token);
-                        return false;
-                    }
-                })
-                .map(Map.Entry::getKey)
-                .findFirst()
-                .orElse(token);
-
-        synonymMap.put(token, existingSynonym);
+        if (synonymMap.containsKey(token))
+            return;
+        synonymMap.put(token, token);
     }
 
     public void add(Document doc, String synonym, int position) {

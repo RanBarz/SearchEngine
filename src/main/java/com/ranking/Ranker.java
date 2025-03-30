@@ -7,5 +7,5 @@ import java.util.List;
 import java.util.Map;
 
 public interface Ranker {
-    void sort(List<InvertedIndexRecord> records, Map<String, Double> idfMap, List<Document> documents);
+    void sort(List<String> queryTerms, List<InvertedIndexRecord> records, Map<String, Double> idfMap, List<Document> documents);
 }
