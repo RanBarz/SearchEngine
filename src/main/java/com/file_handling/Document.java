@@ -13,7 +13,7 @@ public class Document implements Serializable {
     private String url;
     private int wordCount;
     private int id;
-    private Set<String> outgoingLinks;
+    private final Set<String> outgoingLinks;
 
     public Document() {
         this.outgoingLinks = new HashSet<>();

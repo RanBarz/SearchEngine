@@ -2,9 +2,7 @@ package com.indexing.helpers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
 import java.util.List;
-import java.io.Serializable;
 import java.util.ArrayList;
 
 @Component
@@ -13,6 +11,9 @@ public class TextPreparer{
 
 	@Autowired
 	private Stemmer stemmer;
+
+	@Autowired
+	private WordNetUtil wordnetObj;
 	
 	public List<String> tokenize(String text) {
 		String[] tokens = text.split("[^a-zA-Z0-9]+");
@@ -20,7 +21,8 @@ public class TextPreparer{
         for (String token : tokens) {
             token = token.toLowerCase();
             if (!isStopWord(token)) {
-				token = stemmer.stem(token);
+				if (wordnetObj.isVerb(stemmer.stem(token)))
+					token = stemmer.stem(token);
 				filteredTokens.add(token);
 			}
         }

@@ -1,5 +1,6 @@
 package com.file_handling;
 
+import com.utilty.Serializer;
 import org.springframework.stereotype.Component;
 import org.xml.sax.*;
 import org.xml.sax.helpers.DefaultHandler;
@@ -17,7 +18,7 @@ public final class DocumentXmlLoader implements XmlLoader<Document> {
             "C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\fullTextWikipediaData.xml.gz";
     private final String SER_PATH =
             "C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\fullTextWikipediaData.ser.gz";
-    private final int PREDICTED_SIZE = 50000;
+    private final int PREDICTED_SIZE = 1000000;
     private List<Document> documents;
 
     public List<Document> getDocuments() {
@@ -25,37 +26,37 @@ public final class DocumentXmlLoader implements XmlLoader<Document> {
     }
 
     @PostConstruct
-    public void load() throws Exception {
+    public void load() {
         try {
             loadSerialized();
         } catch (Exception e) {
+            getFromXmlFile();
+        }
+    }
+
+    private void getFromXmlFile() {
+        try {
             documents = new ArrayList<>(PREDICTED_SIZE);
-            InputStream fileStream = openGzipStream(XML_PATH);
+            InputStream fileStream = openGzipStream();
             parseXml(fileStream, documents);
             save();
+        }
+        catch (Exception e) {
+            System.out.println("Encountered a problem loading the xml file of pages...");
         }
     }
 
     @Override
-    public void loadSerialized() throws Exception {
-        FileInputStream fileIn = new FileInputStream(SER_PATH);
-        GZIPInputStream gzipIn = new GZIPInputStream(fileIn);
-        ObjectInputStream in = new ObjectInputStream(gzipIn);
-        documents = (ArrayList<Document>) in.readObject();
-        in.close();
+    public void loadSerialized() throws Exception{
+        documents = Serializer.load(SER_PATH);
     }
 
-    @PreDestroy
-    public void save() throws Exception {
-        FileOutputStream fileOut = new FileOutputStream(SER_PATH);
-        GZIPOutputStream gzipOut = new GZIPOutputStream(fileOut);
-        ObjectOutputStream out = new ObjectOutputStream(gzipOut);
-        out.writeObject(documents);
-        out.close();
+    public void save() {
+        Serializer.save(SER_PATH, documents);
     }
 
-    private InputStream openGzipStream(String path) throws IOException {
-        return new GZIPInputStream(Files.newInputStream(new File(path).toPath()));
+    private InputStream openGzipStream() throws IOException {
+        return new GZIPInputStream(Files.newInputStream(new File(XML_PATH).toPath()));
     }
 
     private void parseXml(InputStream fileStream, List<Document> documents) throws Exception {
@@ -68,13 +69,11 @@ public final class DocumentXmlLoader implements XmlLoader<Document> {
         return new DefaultHandler() {
             private Document currentDocument;
             private StringBuilder currentValue;
-            private boolean inPage;
             private int counter;
 
             @Override
             public void startElement(String uri, String localName, String qName, Attributes attributes) {
                 if ("page".equalsIgnoreCase(qName)) {
-                    inPage = true;
                     currentDocument = new Document();
                 }
                 currentValue = new StringBuilder();
@@ -90,12 +89,11 @@ public final class DocumentXmlLoader implements XmlLoader<Document> {
                         case "text": // Full Wikipedia page text
                             String text = currentValue.toString();
                             currentDocument.setText(text);
-                            extractLinks(text, currentDocument); // Extract outgoing links
+                            extractLinks(text, currentDocument);
                             break;
                         case "page":
-                            currentDocument.setId(counter++); // Assign ID here, ensuring it's only done once per document
+                            currentDocument.setId(counter++);
                             documents.add(currentDocument);
-                            inPage = false;
                             break;
                     }
                 }

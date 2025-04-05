@@ -1,9 +1,6 @@
 package com.indexing.data_types;
 
 import com.file_handling.Document;
-import com.indexing.helpers.SynonymChecker;
-import net.sf.extjwnl.JWNLException;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,29 +8,14 @@ import java.util.List;
 import java.util.Map;
 
 public class InvertedIndexData implements Serializable {
-    private static final long serialVersionUID = -5347919533701690247L;
-    private Map<String, List<InvertedIndexRecord>> index;
-    private Map<String, String> synonymMap;
+    private final Map<String, List<InvertedIndexRecord>> index;
 
     public InvertedIndexData() {
         index = new HashMap<>();
-        synonymMap = new HashMap<>();
     }
 
     public List<InvertedIndexRecord> get(String token) {
-        return index.getOrDefault(findSynonymInMap(token), null);
-    }
-
-    public String findSynonymInMap(String token) {
-        if (synonymMap.containsKey(token))
-            return token;
-        return synonymMap.getOrDefault(token, null);
-    }
-
-    public void addToSynonymMap(String token) {
-        if (synonymMap.containsKey(token))
-            return;
-        synonymMap.put(token, token);
+        return index.getOrDefault(token, null);
     }
 
     public void add(Document doc, String synonym, int position) {
@@ -58,5 +40,9 @@ public class InvertedIndexData implements Serializable {
         }
 
         return idfMap;
+    }
+
+    public Map<String, List<InvertedIndexRecord>> getIndex() {
+        return index;
     }
 }

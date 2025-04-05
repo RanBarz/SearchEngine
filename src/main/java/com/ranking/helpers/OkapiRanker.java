@@ -2,6 +2,7 @@ package com.ranking.helpers;
 
 import com.file_handling.Document;
 import com.indexing.data_types.InvertedIndexRecord;
+import com.utilty.Serializer;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -21,30 +22,17 @@ public class OkapiRanker {
 
     private final double k1 = 1.2;
     private final double b = 0.75;
+    private final double TITLE_WEIGHT = 2.0;
     private Map<String, Double> idfMap;
 
-    @PreDestroy
     public void save() {
-        try {
-            FileOutputStream fileOut = new FileOutputStream(PATH);
-            GZIPOutputStream gzipOut = new GZIPOutputStream(fileOut);
-            ObjectOutputStream out = new ObjectOutputStream(gzipOut);
-            out.writeObject(idfMap);
-            out.close();
-        }
-        catch (Exception e) {
-            System.out.println("Failed to save idf map...");
-        }
+        Serializer.save(PATH, idfMap);
     }
 
     @PostConstruct
     public void load() {
         try {
-            FileInputStream fileIn = new FileInputStream(PATH);
-            GZIPInputStream gzipIn = new GZIPInputStream(fileIn);
-            ObjectInputStream in = new ObjectInputStream(gzipIn);
-            idfMap = (Map<String, Double>) in.readObject();
-            in.close();
+            idfMap = Serializer.load(PATH);
         } catch (Exception e) {
             System.out.println("No idf map, one will be created.");
         }
@@ -62,12 +50,12 @@ public class OkapiRanker {
         for (String term : queryTerms) {
             double idf = idfMap.getOrDefault(term, 1.0);
 
-            addToScores(scores, records, documents, idf, avgDl);
+            addToScores(term, scores, records, documents, idf, avgDl);
         }
         return scores;
     }
 
-    private void addToScores(Map<String, Double> scores, List<InvertedIndexRecord> records, List<Document> documents, double idf, double avgDl) {
+    private void addToScores(String term, Map<String, Double> scores, List<InvertedIndexRecord> records, List<Document> documents, double idf, double avgDl) {
         for (InvertedIndexRecord record : records) {
             int docId = record.getDocumentId();
             int termFrequency = record.getTokenPositions().size();
@@ -76,6 +64,11 @@ public class OkapiRanker {
             if (doc == null) continue;
 
             double termScore = computeBM25(idf, termFrequency, doc.getWordCount(), avgDl);
+
+            if (doc.getTitle().toLowerCase().contains(term.toLowerCase())) {
+                termScore *= TITLE_WEIGHT;
+            }
+
             scores.put(doc.getTitle(), scores.getOrDefault(doc.getTitle(), 0.0) + termScore);
         }
     }

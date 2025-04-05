@@ -1,13 +1,10 @@
 package com.indexing;
 
-import java.io.*;
 import java.util.*;
-import java.util.zip.*;
-
-import com.indexing.data_types.InvertedIndexData;
-import com.indexing.data_types.InvertedIndexRecord;
+import com.indexing.data_types.*;
 import com.indexing.helpers.*;
 import com.file_handling.*;
+import com.utilty.Serializer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -15,28 +12,36 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 @Component
-public class InvertedIndex implements Index{
+public class InvertedIndex implements Index <Document, InvertedIndexRecord, InvertedIndexData>{
 	private final String PATH = "C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\InvertedIndexData.ser.gz";
 	private InvertedIndexData data;
 
 	@Autowired
 	private TextPreparer tp;
 
+	@Autowired
+	private WordNetUtil synonymFinder;
+
 	public List<InvertedIndexRecord> lookUp(String token) {
-		return data.get(token);
+		List<InvertedIndexRecord> result = new ArrayList<>(data.get(token));
+		String synonym =  synonymFinder.findSynonym(token);
+
+		if (synonym != null && data.get(synonym) != null)
+			result.addAll(data.get(synonym));
+		return result;
 	}
 
 	public Map<String, Double> getIdfMap(int totalSize) {
 		return data.getIdfMap(totalSize);
 	}
 	
-	public void create(List<Document> documents) throws Exception {
+	public void create(List<Document> documents) {
 		data = new InvertedIndexData();
 		List<String> tokens;
 		HashSet<String> handledTokens= new HashSet<>();
 		float percent;
 
-		System.out.printf("Inverted Index is being created...\n");
+		System.out.println("Inverted Index is being created...");
 
 		for (Document doc: documents) {
 	        tokens = tp.tokenize(doc.getText());
@@ -44,7 +49,6 @@ public class InvertedIndex implements Index{
 			addTokens(doc, tokens);
 
 			percent = (float) doc.getId() / documents.size() * 100;
-
 			System.out.printf("%f done\n", percent);
 	    }
 	}
@@ -52,7 +56,6 @@ public class InvertedIndex implements Index{
 	private void addToHandled(List<String> tokens, HashSet<String> handledTokens) {
 		for (String token : tokens) {
 			if (!handledTokens.contains(token)) {
-				data.addToSynonymMap(token);
 				handledTokens.add(token);
 			}
 		}
@@ -67,33 +70,21 @@ public class InvertedIndex implements Index{
 	}
 
 	private void addToken(Document doc, String token, int position) {
-		String synonym = data.findSynonymInMap(token);
-
-		data.add(doc, synonym, position);
+		data.add(doc, token, position);
 	}
 
-	@PreDestroy
-	public void save() throws Exception {
-		FileOutputStream fileOut = new FileOutputStream(PATH);
-		GZIPOutputStream gzipOut = new GZIPOutputStream(fileOut);
-		ObjectOutputStream out = new ObjectOutputStream(gzipOut);
-		out.writeObject(data);
-		out.close();
+	public void save()  {
+		Serializer.save(PATH, data);
 	}
 
 	@PostConstruct
-	public void load() throws Exception{
-		try {
-			FileInputStream fileIn = new FileInputStream(PATH);
-			GZIPInputStream gzipIn = new GZIPInputStream(fileIn);
-			ObjectInputStream in = new ObjectInputStream(gzipIn);
-			data = (InvertedIndexData) in.readObject();
-			in.close();
-		}
-		catch (Exception e) {
-			System.out.println("No Inverted Index, one will be created.");
-		}
-	}
+	public void load() {
+        try {
+            data = Serializer.load(PATH);
+        } catch (Exception e) {
+            System.out.println("Inverted Index will be created...");
+        }
+    }
 
 	public boolean isEmpty() {
 		return data == null;

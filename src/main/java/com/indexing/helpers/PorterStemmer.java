@@ -1,8 +1,6 @@
 package com.indexing.helpers;
 
 import org.springframework.stereotype.Component;
-
-import java.io.Serializable;
 import java.util.*;
 
 @Component
