@@ -2,18 +2,18 @@ package com.indexing.helpers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
 import java.util.List;
-import java.io.Serializable;
 import java.util.ArrayList;
 
 @Component
-public class TextPreparer implements Serializable{
-	private static final long serialVersionUID = 1L;
+public class TextPreparer{
 	private static final String[] STOP_WORDS = {"a", "and", "be", "have", "i", "in", "of", "that", "the", "to"};
 
 	@Autowired
 	private Stemmer stemmer;
+
+	@Autowired
+	private WordNetUtil wordnetObj;
 	
 	public List<String> tokenize(String text) {
 		String[] tokens = text.split("[^a-zA-Z0-9]+");
@@ -21,7 +21,8 @@ public class TextPreparer implements Serializable{
         for (String token : tokens) {
             token = token.toLowerCase();
             if (!isStopWord(token)) {
-				token = stemmer.stem(token);
+				if (wordnetObj.isVerb(stemmer.stem(token)))
+					token = stemmer.stem(token);
 				filteredTokens.add(token);
 			}
         }

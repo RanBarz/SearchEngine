@@ -1,128 +1,96 @@
 package com.indexing;
 
-import java.io.*;
 import java.util.*;
-import java.util.zip.*;
-import net.sf.extjwnl.JWNLException;
+import com.indexing.data_types.*;
 import com.indexing.helpers.*;
 import com.file_handling.*;
+import com.utilty.Serializer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
 @Component
-public class InvertedIndex implements Serializable{
-	private static final long serialVersionUID = 1L;
-	private static final int PREDICTED_INDEX_SIZE = 525000;
-	private static final int PREDICTED_SYNONYM_SIZE = 316000;
-	private Map<String, List<Integer>> index;
-	private Map<String, String> synonymMap;
+public class InvertedIndex implements Index <Document, InvertedIndexRecord, InvertedIndexData>{
+	private final String PATH = "C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\InvertedIndexData.ser.gz";
+	private InvertedIndexData data;
 
 	@Autowired
 	private TextPreparer tp;
 
-	public List<Integer> lookUp(String token) {
-		return index.getOrDefault(this.findSynonymInMap(token), null);
+	@Autowired
+	private WordNetUtil synonymFinder;
+
+	public List<InvertedIndexRecord> lookUp(String token) {
+		List<InvertedIndexRecord> result = new ArrayList<>(data.get(token));
+		String synonym =  synonymFinder.findSynonym(token);
+
+		if (synonym != null && data.get(synonym) != null)
+			result.addAll(data.get(synonym));
+		return result;
+	}
+
+	public Map<String, Double> getIdfMap(int totalSize) {
+		return data.getIdfMap(totalSize);
 	}
 	
-	public void create(List<Document> documents){
-		index = new HashMap<>(PREDICTED_INDEX_SIZE);
-		synonymMap = new HashMap<>(PREDICTED_SYNONYM_SIZE);
-
-        List<String> tokens;
+	public void create(List<Document> documents) {
+		data = new InvertedIndexData();
+		List<String> tokens;
 		HashSet<String> handledTokens= new HashSet<>();
-		
+		float percent;
+
+		System.out.println("Inverted Index is being created...");
+
 		for (Document doc: documents) {
 	        tokens = tp.tokenize(doc.getText());
-
 			addToHandled(tokens, handledTokens);
 			addTokens(doc, tokens);
-	        
-	        if (doc.getId() % 1000 == 0)
-	            System.out.printf("%.2f%% done\n", (float) doc.getId() / documents.size() * 100);
+
+			percent = (float) doc.getId() / documents.size() * 100;
+			System.out.printf("%f done\n", percent);
 	    }
 	}
 
 	private void addToHandled(List<String> tokens, HashSet<String> handledTokens) {
 		for (String token : tokens) {
 			if (!handledTokens.contains(token)) {
-				addToSynonymMap(token);
 				handledTokens.add(token);
 			}
 		}
 	}
 
 	public void addTokens(Document doc, List<String> tokens) {
-		Set<String> processedTokens = new HashSet<>();
-	
+		int position = 0;
+
 		for (String token : tokens) {
-			addToken(doc, token, processedTokens);
+			addToken(doc, token, position++);
 		}
 	}
 
-	private void addToken(Document doc, String token, Set<String> processedTokens) {
-		if (processedTokens.contains(token))
-			return;
-
-		String synonym;
-		List<Integer> idList;
-
-		synonym = findSynonymInMap(token);
-		index.computeIfAbsent(synonym, k -> new ArrayList<>());
-		idList = index.get(synonym);
-
-		if (!idList.isEmpty() && idList.get(idList.size() - 1).equals(doc.getId())) {
-			return;
-		}
-
-		idList.add(doc.getId());
-		processedTokens.add(token);
+	private void addToken(Document doc, String token, int position) {
+		data.add(doc, token, position);
 	}
 
-	public void addToSynonymMap(String token) {
-		String existingSynonym = synonymMap.entrySet()
-				.parallelStream()
-				.filter(entry -> {
-					try {
-						return SynonymChecker.areSynonyms(token, entry.getKey());
-					} catch (JWNLException e) {
-						System.out.println("Error checking synonyms for: " + token);
-						return false;
-					}
-				})
-				.map(Map.Entry::getKey)
-				.findFirst()
-				.orElse(token);
-
-		synonymMap.put(token, existingSynonym);
+	public void save()  {
+		Serializer.save(PATH, data);
 	}
 
-
-	public String findSynonymInMap(String token) {
-		if (synonymMap.containsKey(token))
-			return token;
-		return synonymMap.getOrDefault(token, null);
-	}
-	
-	
-	public void save() throws Exception {
-		FileOutputStream fileOut = new FileOutputStream("C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\FullInvertedIndex.ser.gz");
-		GZIPOutputStream gzipOut = new GZIPOutputStream(fileOut);
-		ObjectOutputStream out = new ObjectOutputStream(gzipOut);
-		out.writeObject(this);
-		out.close();
-	}
-	
-	public void load() throws Exception{
-		FileInputStream fileIn = new FileInputStream("C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\FullInvertedIndex.ser.gz");
-		GZIPInputStream gzipIn = new GZIPInputStream(fileIn);
-		ObjectInputStream in = new ObjectInputStream(gzipIn);
-		InvertedIndex loadedObject = (InvertedIndex) in.readObject();
-		in.close();
-		index = loadedObject.index;
-		synonymMap = loadedObject.synonymMap;
-	}
+	@PostConstruct
+	public void load() {
+        try {
+            data = Serializer.load(PATH);
+        } catch (Exception e) {
+            System.out.println("Inverted Index will be created...");
+        }
+    }
 
 	public boolean isEmpty() {
-		return index == null;
+		return data == null;
+	}
+
+	public InvertedIndexData getData() {
+		return data;
 	}
 }

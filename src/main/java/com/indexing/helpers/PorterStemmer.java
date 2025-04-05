@@ -1,13 +1,10 @@
 package com.indexing.helpers;
 
 import org.springframework.stereotype.Component;
-
-import java.io.Serializable;
 import java.util.*;
 
 @Component
-public class PorterStemmer implements Stemmer, Serializable{
-   private static final long serialVersionUID = 1L;
+public class PorterStemmer implements Stemmer {
    private final Map<String, String> dictionary = new HashMap<>();
    private static final Set<Character> VOWEL_SET = new HashSet<>(Arrays.asList('a', 'e', 'i', 'o', 'u'));
    private String stem;

@@ -1,27 +1,62 @@
 package com.file_handling;
 
+import com.utilty.Serializer;
 import org.springframework.stereotype.Component;
 import org.xml.sax.*;
 import org.xml.sax.helpers.DefaultHandler;
+import javax.annotation.*;
 import javax.xml.parsers.*;
 import java.io.*;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.zip.GZIPInputStream;
+import java.util.regex.*;
+import java.util.zip.*;
 
 @Component
-public final class DocumentXmlLoader implements XmlLoader<Document>{
-	private final int PREDICTED_SIZE = 690000;
+public final class DocumentXmlLoader implements XmlLoader<Document> {
+    private final String XML_PATH =
+            "C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\fullTextWikipediaData.xml.gz";
+    private final String SER_PATH =
+            "C:\\Software Development\\Java Projects\\Full Text Search Engine\\src\\main\\resources\\fullTextWikipediaData.ser.gz";
+    private final int PREDICTED_SIZE = 1000000;
+    private List<Document> documents;
 
-    public List<Document> load(String path) throws Exception {
-        List<Document> documents = new ArrayList<>(PREDICTED_SIZE);
-        InputStream fileStream = openGzipStream(path);
-        parseXml(fileStream, documents);
+    public List<Document> getDocuments() {
         return documents;
     }
 
-    private InputStream openGzipStream(String path) throws IOException {
-        return new GZIPInputStream(Files.newInputStream(new File(path).toPath()));
+    @PostConstruct
+    public void load() {
+        try {
+            loadSerialized();
+        } catch (Exception e) {
+            getFromXmlFile();
+        }
+    }
+
+    private void getFromXmlFile() {
+        try {
+            documents = new ArrayList<>(PREDICTED_SIZE);
+            InputStream fileStream = openGzipStream();
+            parseXml(fileStream, documents);
+            save();
+        }
+        catch (Exception e) {
+            System.out.println("Encountered a problem loading the xml file of pages...");
+        }
+    }
+
+    @Override
+    public void loadSerialized() throws Exception{
+        documents = Serializer.load(SER_PATH);
+    }
+
+    public void save() {
+        Serializer.save(SER_PATH, documents);
+    }
+
+    private InputStream openGzipStream() throws IOException {
+        return new GZIPInputStream(Files.newInputStream(new File(XML_PATH).toPath()));
     }
 
     private void parseXml(InputStream fileStream, List<Document> documents) throws Exception {
@@ -38,9 +73,8 @@ public final class DocumentXmlLoader implements XmlLoader<Document>{
 
             @Override
             public void startElement(String uri, String localName, String qName, Attributes attributes) {
-                if ("doc".equalsIgnoreCase(qName)) {
+                if ("page".equalsIgnoreCase(qName)) {
                     currentDocument = new Document();
-                    currentDocument.setId(counter++);
                 }
                 currentValue = new StringBuilder();
             }
@@ -52,13 +86,13 @@ public final class DocumentXmlLoader implements XmlLoader<Document>{
                         case "title":
                             currentDocument.setTitle(currentValue.toString());
                             break;
-                        case "url":
-                            currentDocument.setUrl(currentValue.toString());
+                        case "text": // Full Wikipedia page text
+                            String text = currentValue.toString();
+                            currentDocument.setText(text);
+                            extractLinks(text, currentDocument);
                             break;
-                        case "abstract":
-                            currentDocument.setText(currentValue.toString());
-                            break;
-                        case "doc":
+                        case "page":
+                            currentDocument.setId(counter++);
                             documents.add(currentDocument);
                             break;
                     }
@@ -70,5 +104,13 @@ public final class DocumentXmlLoader implements XmlLoader<Document>{
                 currentValue.append(ch, start, length);
             }
         };
+    }
+
+    private void extractLinks(String text, Document document) {
+        Pattern linkPattern = Pattern.compile("\\[\\[([^\\]|#]+)");
+        Matcher matcher = linkPattern.matcher(text);
+        while (matcher.find()) {
+            document.addOutgoingLink(matcher.group(1).trim()); // Store link without anchor text
+        }
     }
 }
