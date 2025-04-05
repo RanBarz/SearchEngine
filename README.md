@@ -1,6 +1,6 @@
 # **Advanced Search Engine**
 
-A highly efficient and feature-rich search engine built with custom algorithms, including stemming, synonym expansion, Okapi BM25 ranking, and PageRank. This project leverages machine learning techniques for enhanced search relevance and performance.
+A highly efficient and feature-rich search engine built with custom algorithms, including stemming, synonym expansion, Okapi BM25 ranking, and PageRank. 
 
 ---
 
